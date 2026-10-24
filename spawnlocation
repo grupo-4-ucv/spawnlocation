@@ -1,0 +1,76 @@
+
+local Players = game:GetService("Players")
+
+local function setupPlayer(player)
+    local leaderstats = Instance.new("Folder")
+    leaderstats.Name = "leaderstats"
+    leaderstats.Parent = player
+
+    local checkpoint = Instance.new("IntValue")
+    checkpoint.Name = "Checkpoint"
+    checkpoint.Value = 0
+    checkpoint.Parent = leaderstats
+
+    local currentSpawn = Instance.new("ObjectValue")
+    currentSpawn.Name = "CurrentCheckpoint"
+    currentSpawn.Parent = player
+
+    player.CharacterAdded:Connect(function(character)
+        local root = character:WaitForChild("HumanoidRootPart")
+        task.wait(0.1)
+
+        if currentSpawn.Value then
+            root.CFrame = currentSpawn.Value.CFrame
+                + Vector3.new(0, 4, 0)
+        end
+    end)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+local function connectSpawn(spawn)
+    if not spawn:IsA("SpawnLocation") then
+        return
+    end
+
+    spawn.Touched:Connect(function(hit)
+        local character = hit:FindFirstAncestorOfClass("Model")
+        local player = character
+            and Players:GetPlayerFromCharacter(character)
+
+        if not player then return end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then return end
+
+        
+        local number = tonumber(
+            spawn.Name:match("%((%d+)%)$")
+            or spawn.Name:match("(%d+)$")
+        )
+
+        if not number then
+            warn("El SpawnLocation no tiene número: " .. spawn.Name)
+            return
+        end
+
+        local stats = player:FindFirstChild("leaderstats")
+        local value = stats and stats:FindFirstChild("Checkpoint")
+        local current = player:FindFirstChild("CurrentCheckpoint")
+
+        if value and current and number >= value.Value then
+            value.Value = number
+            current.Value = spawn
+        end
+    end)
+end
+
+
+for _, object in ipairs(workspace:GetDescendants()) do
+    connectSpawn(object)
+end
+
+
+workspace.DescendantAdded:Connect(connectSpawn)
+
+print("Sistema de checkpoints iniciado")
